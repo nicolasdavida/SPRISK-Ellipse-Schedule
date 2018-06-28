@@ -20,9 +20,9 @@ import object.Data;
  *
  * @author Armando
  */
-public class connection {
+public class connectionOra {
     
-    public static Connection JCConn(){
+    public static Connection OraConn(){
         try{
             Class.forName("oracle.jdbc.OracleDriver");
             Connection con = DriverManager.getConnection("jdbc:oracle:thin:@10.100.57.148:1522:ellrep","ellrep8","ellrep8");
@@ -60,18 +60,48 @@ public class connection {
             //System.out.println(columnCount);
             
             
+            
             List<Data> DataList = new ArrayList<>();
             
             while(rs.next()){
                 contador++;
+                // Creando el objeto y dandole los valores
                 Data data = new Data();
                 data.setStock_code(rs.getString(1));
                 data.setStock_status(rs.getString(2));
                 data.setCriticidad(rs.getString(3));
-                System.out.println("N° objeto:    " + contador);
-                System.out.println("Stock code:   " + data.getStock_code());
-                System.out.println("Stock status: " + data.getStock_status());
-                System.out.println("Criticidad:   " + data.getCriticidad());
+                data.setItem_name(rs.getString(4));
+                data.setInvent_cost_pr(rs.getString(5));
+                data.set_Class(rs.getString(6));
+                data.setStock_type(rs.getString(7));
+                data.setUnit_of_issue(rs.getString(8));
+                data.setDs(rs.getString(9));
+                data.setDs_large(rs.getString(10));
+                data.setDues_in(rs.getString(11));
+                data.setIn_transit(rs.getString(12));
+                data.setConsign_itrans(rs.getString(13));
+                data.setTotal_picked(rs.getString(14));
+                data.setDues_out(rs.getString(15));
+                data.setReserved(rs.getString(16));
+                
+                // Imprimiendo los valores
+                System.out.println("N° objeto:          " + contador);
+                System.out.println("Stock code:         " + data.getStock_code());
+                System.out.println("Stock status:       " + data.getStock_status());
+                System.out.println("Criticidad:         " + data.getCriticidad());
+                System.out.println("Item Name:          " + data.getItem_name());
+                System.out.println("Invent_cost_pr:     " + data.getInvent_cost_pr());
+                System.out.println("Clase:              " + data.get_Class());
+                System.out.println("Stock type:         " + data.getStock_type());
+                System.out.println("Unit of Issue:      " + data.getUnit_of_issue());
+                System.out.println("Descripcion:        " + data.getDs());
+                System.out.println("Descripcion larga:  " + data.getDs_large());
+                System.out.println("Dues in:            " + data.getDues_in());
+                System.out.println("In transit:         " + data.getIn_transit());
+                System.out.println("Consign:            " + data.getConsign_itrans());
+                System.out.println("Total picked:       " + data.getTotal_picked());
+                System.out.println("Dues out:           " + data.getDues_out());
+                System.out.println("Reservado:          " + data.getReserved());
                 System.out.println("-----------------------------------------");
                 DataList.add(data);
             }
