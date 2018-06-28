@@ -1,6 +1,7 @@
 package main;
 
 
+import connection.connectionAll;
 import connection.connectionOra;
 import connection.connectionMS;
 import java.sql.Connection;
@@ -18,10 +19,13 @@ public class Main {
     
     public static void main(String[] args)
     {
+        // Conectar todo
+        connectionAll.connectAll();
+        
         // Conexion con MSSQL
-        connectionMS.MSConn();
+        //connectionMS.MSConn();
         
         // Conexion con Oracle remoto
-        connectionOra.OraConn();
+        //connectionOra.OraConn();
     }
 }
