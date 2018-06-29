@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Date;
 import object.Data;
 //import object.DataMS;
 
@@ -19,20 +20,22 @@ import object.Data;
  */
 public class connectionAll {
     
+    static SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss");
+    
     public static Connection connectAll(){
+            
         
         try{
             
-            String timeStamp = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss").format(Calendar.getInstance().getTime());
             
-            System.out.println("////////////////INICIO DEL PROCESO: " + timeStamp + "/////////////////////");
-            System.out.println("INICIO conexion a Oracle:                       " + timeStamp);
+            System.out.println("////////////////INICIO DEL PROCESO: " + tiempo() + "/////////////////////");
+            System.out.println("INICIO conexion a Oracle:                       " + tiempo());
             
             Class.forName("oracle.jdbc.OracleDriver");
             Connection conOra = DriverManager.getConnection("jdbc:oracle:thin:@10.100.57.148:1522:ellrep","ellrep8","ellrep8");
             System.out.println("Conexion exitosa");
             
-            System.out.println("INICIO query de Oracle:                         " + timeStamp);
+            System.out.println("INICIO query de Oracle:                         " + tiempo());
             
             Statement st = conOra.createStatement();
             
@@ -49,7 +52,7 @@ public class connectionAll {
             ") as DS_LARGE, "+
             "B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, B.DUES_OUT, B.RESERVED "+
             "FROM ellrep.MSF100 A INNER JOIN ellrep.MSF170 B ON A.STOCK_CODE = B.STOCK_CODE "+
-            "WHERE A.CLASS in ('2','A','E','R') and B.STOCK_TYPE in ('6','7','8') and A.STOCK_STATUS in ('X','A') "+
+            "WHERE A.CLASS in ('2','A','E','R') and B.STOCK_TYPE in ('6','7','8') and A.STOCK_STATUS in ('X','A') and ROWNUM <= 100"+
             "and B.INVT_STAT_CODE in ('2111','3121','3131','3141','3151','4141','5201','5202','5203','5221','5222','5223','5231','5321','5401','5501','6200','6201','6203','6204','6205','6221') " +
             "GROUP BY B.STOCK_CODE, A.STOCK_STATUS, A.STOCK_SECTIONX1, A.ITEM_NAME, A.DESC_LINEX1, A.DESC_LINEX2, A.DESC_LINEX3, A.DESC_LINEX4, "+
             "B.UNIT_OF_ISSUE, B.INVENT_COST_PR, B.CLASS, B.STOCK_TYPE, B.ROQ, B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, "+
@@ -59,17 +62,17 @@ public class connectionAll {
             
             //String query3 = "SELECT * FROM ELLREP.MRF8MW";
             
-            //int contador = 0;
+            int contador = 0;
             
             //st.setFetchSize(100);
             ResultSet rs = st.executeQuery(query);
             //ResultSetMetaData rsmd = rs.getMetaData();
             //int columnCount = rsmd.getColumnCount();
-            System.out.println("FIN de query a Oracle:                          " + timeStamp);
+            System.out.println("FIN de query a Oracle:                          " + tiempo());
             //System.out.println(columnCount);
             
-            System.out.println("INICIO query a List:                            " + timeStamp);
-            List<Data> DataList = new ArrayList<>();
+            System.out.println("INICIO query a List:                            " + tiempo());
+            List<Data> dataList = new ArrayList<>();
             
             while(rs.next()){
                 //contador++;
@@ -113,7 +116,8 @@ public class connectionAll {
                 System.out.println("Reservado:          " + data.getReserved());
                 System.out.println("-----------------------------------------");
                 */
-                DataList.add(data);
+                dataList.add(data);
+                System.out.println("Registro N°: " + contador++ + ", Hora : " + tiempo());
             }
             
             //System.out.println("FUNCIONA :D");
@@ -138,22 +142,24 @@ public class connectionAll {
                 */
             //}
             
-            System.out.println("INICIO conexion a MSSQL:                        " + timeStamp);
+            System.out.println("INICIO conexion a MSSQL:                        " + tiempo());
             // Conexion a la Base de Datos MSSQL
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
             System.out.println("Conexion a MSSQL exitosa");
             
             
-            System.out.println("INICIO insert batch a MSSQL:                    " + timeStamp);
+            System.out.println("INICIO insert batch a MSSQL:                    " + tiempo());
             
             // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
             PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO dbo.TEST(stock_code, stock_status, criticidad) VALUES (?,?,?)"
+                "INSERT INTO dbo.TEST(stock_code, stock_status, criticidad, item_name, invent_cost_pr"
+                        + ", class, stock_type, unit_of_issue, ds, ds_large, dues_in, in_transit"
+                        + ", consign_itrans, total_picked, dues_out, reserved) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"       
             );
             
             // Por cada objeto en la lista DataMS, pasa los parametros correspondientes a la prepared statement
-            for(Data data : DataList)
+            for(Data data : dataList)
             {
                 ps.setString(1, data.getStock_code());
                 ps.setString(2, data.getStock_status());
@@ -185,8 +191,8 @@ public class connectionAll {
             
             conOra.close();
             
-            System.out.println("FIN insert batch a MSSQL:                       " + timeStamp);
-            System.out.println("////////////////FIN DEL PROCESO: " + timeStamp + "/////////////////////");
+            System.out.println("FIN insert batch a MSSQL:                       " + tiempo());
+            System.out.println("////////////////FIN DEL PROCESO: " + tiempo() + "/////////////////////");
             
             //Fin
             return conOra;
@@ -196,5 +202,9 @@ public class connectionAll {
             System.out.println("Error, " + ex.toString());
         }
         return null;
+    }
+
+    private static String tiempo() {
+        return format.format(new Date(System.currentTimeMillis()));
     }
 }
