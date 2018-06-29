@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Date;
+import java.util.HashMap;
 import object.Data;
 //import object.DataMS;
 
@@ -39,45 +40,58 @@ public class connectionAll {
             
             Statement st = conOra.createStatement();
             
-            // OJO TIENE LIMITE ROWNUM <=100
-            // QUIERE DECIR QUE SOLO RETORNARA LAS PRIMERAS 100 FILAS, QUITARLO MAS ADELANTE
             String query = 
                     
-            "SELECT  B.STOCK_CODE, A.STOCK_STATUS, A.STOCK_SECTIONX1 AS CRITICIDAD, "+
-            "A.ITEM_NAME, B.INVENT_COST_PR,  B.CLASS, B.STOCK_TYPE, B.UNIT_OF_ISSUE, "+
-            "(A.DESC_LINEX1  || ' ' || A.DESC_LINEX2  || ' ' ||  A.DESC_LINEX3  || ' ' || A.DESC_LINEX4) as DS, "+       
-            "(SELECT b1.CAT_EXT_DATA "+
-            "FROM ellrep.MSF100 a1 INNER JOIN ellrep.MSF1CC b1 ON a1.CAT_EXT_UUID = b1.CAT_EXT_UUID "+
-            "and a1.STOCK_CODE=B.STOCK_CODE "+
-            ") as DS_LARGE, "+
-            "B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, B.DUES_OUT, B.RESERVED "+
-            "FROM ellrep.MSF100 A INNER JOIN ellrep.MSF170 B ON A.STOCK_CODE = B.STOCK_CODE "+
-            "WHERE A.CLASS in ('2','A','E','R') and B.STOCK_TYPE in ('6','7','8') and A.STOCK_STATUS in ('X','A') and ROWNUM <= 100"+
-            "and B.INVT_STAT_CODE in ('2111','3121','3131','3141','3151','4141','5201','5202','5203','5221','5222','5223','5231','5321','5401','5501','6200','6201','6203','6204','6205','6221') " +
-            "GROUP BY B.STOCK_CODE, A.STOCK_STATUS, A.STOCK_SECTIONX1, A.ITEM_NAME, A.DESC_LINEX1, A.DESC_LINEX2, A.DESC_LINEX3, A.DESC_LINEX4, "+
-            "B.UNIT_OF_ISSUE, B.INVENT_COST_PR, B.CLASS, B.STOCK_TYPE, B.ROQ, B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, "+
-            "B.DUES_OUT, B.RESERVED";
+            "SELECT  B.STOCK_CODE, A.STOCK_STATUS, A.STOCK_SECTIONX1 AS CRITICIDAD," +
+"            A.ITEM_NAME, B.INVENT_COST_PR,  B.CLASS, B.STOCK_TYPE, B.UNIT_OF_ISSUE," +
+"            (A.DESC_LINEX1  || ' ' || A.DESC_LINEX2  || ' ' ||  A.DESC_LINEX3  || ' ' || A.DESC_LINEX4) as DS,   " +
+//"            B2.CAT_EXT_DATA as DS_LARGE," +
+"            '' as DS_LARGE," +
+"            B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, B.DUES_OUT, B.RESERVED" +
+"            FROM ellrep.MSF100 A" +
+"            INNER JOIN ellrep.MSF170 B ON A.STOCK_CODE = B.STOCK_CODE" +
+//"            LEFT JOIN ellrep.MSF1CC B2 ON A.CAT_EXT_UUID = B2.CAT_EXT_UUID" +
+"            WHERE A.CLASS in ('2','A','E','R') and B.STOCK_TYPE in ('6','7','8') and A.STOCK_STATUS in ('X','A')" +
+"            and B.INVT_STAT_CODE in ('2111','3121','3131','3141','3151','4141','5201','5202','5203','5221','5222','5223','5231','5321','5401','5501','6200','6201','6203','6204','6205','6221')";
+
+            System.out.println("INICIO conexion a MSSQL:                        " + tiempo());
+            // Conexion a la Base de Datos MSSQL
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
+            System.out.println("Conexion a MSSQL exitosa");
             
-            //String query2 = "SELECT * FROM ELLREP.MSF000_DC0003";
+            // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
+            PreparedStatement ps = con.prepareStatement(
+                "INSERT INTO dbo.TEST(stock_code, stock_status, criticidad, item_name, invent_cost_pr"
+                        + ", class, stock_type, unit_of_issue, ds, ds_large, dues_in, in_transit"
+                        + ", consign_itrans, total_picked, dues_out, reserved, stock_code_act, stock_total_act) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"       
+            );
             
-            //String query3 = "SELECT * FROM ELLREP.MRF8MW";
+            //int contador = 0;
+            int count = 0;
             
-            int contador = 0;
-            
-            //st.setFetchSize(100);
             ResultSet rs = st.executeQuery(query);
-            //ResultSetMetaData rsmd = rs.getMetaData();
-            //int columnCount = rsmd.getColumnCount();
+            
+            String query2 = 
+
+            "SELECT a.STOCK_CODE, Sum(a.SOH) AS STOCK_TOTAL" +
+            " FROM ellrep.MSF1HD a INNER JOIN ellrep.MSF1CS b ON a.CUSTODIAN_ID = b.CUSTODIAN_ID" +
+            " WHERE (((a.HOLDING_TYPE)='F') AND ((b.CUSTODIAN_TYPE)='W') AND ((a.STK_OWNERSHP_IND)='O' Or (a.STK_OWNERSHP_IND)='C'))" +
+            " GROUP BY a.STOCK_CODE" +
+            " ORDER BY a.STOCK_CODE";
+            
+            //Statement st2 = conOra.createStatement();
+            
             System.out.println("FIN de query a Oracle:                          " + tiempo());
-            //System.out.println(columnCount);
+            System.out.println("Creando la lista                                " + tiempo());
             
-            System.out.println("INICIO query a List:                            " + tiempo());
             List<Data> dataList = new ArrayList<>();
+            HashMap<String, Data> dataHM = new HashMap<>();
             
-            while(rs.next()){
-                //contador++;
-                // Creando el objeto y dandole los valores
+            while(rs.next())
+            {
                 Data data = new Data();
+                //System.out.println("Registro N°: " + contador++ + ", Hora : " + tiempo());
                 data.setStock_code(rs.getString(1));
                 data.setStock_status(rs.getString(2));
                 data.setCriticidad(rs.getString(3));
@@ -94,101 +108,61 @@ public class connectionAll {
                 data.setTotal_picked(rs.getString(14));
                 data.setDues_out(rs.getString(15));
                 data.setReserved(rs.getString(16));
-                
-                // Imprimiendo los valores
-                /*
-                System.out.println("N° objeto:          " + contador);
-                System.out.println("Stock code:         " + data.getStock_code());
-                System.out.println("Stock status:       " + data.getStock_status());
-                System.out.println("Criticidad:         " + data.getCriticidad());
-                System.out.println("Item Name:          " + data.getItem_name());
-                System.out.println("Invent_cost_pr:     " + data.getInvent_cost_pr());
-                System.out.println("Clase:              " + data.get_Class());
-                System.out.println("Stock type:         " + data.getStock_type());
-                System.out.println("Unit of Issue:      " + data.getUnit_of_issue());
-                System.out.println("Descripcion:        " + data.getDs());
-                System.out.println("Descripcion larga:  " + data.getDs_large());
-                System.out.println("Dues in:            " + data.getDues_in());
-                System.out.println("In transit:         " + data.getIn_transit());
-                System.out.println("Consign:            " + data.getConsign_itrans());
-                System.out.println("Total picked:       " + data.getTotal_picked());
-                System.out.println("Dues out:           " + data.getDues_out());
-                System.out.println("Reservado:          " + data.getReserved());
-                System.out.println("-----------------------------------------");
-                */
-                dataList.add(data);
-                System.out.println("Registro N°: " + contador++ + ", Hora : " + tiempo());
+
+                //dataList.add(data);
+                dataHM.put(rs.getString(1), data);
+            }
+            rs.close();
+            
+            
+            ResultSet rs2 = st.executeQuery(query2);       
+            while(rs2.next()){
+               Data data = dataHM.get(rs2.getString(1));
+               data.setStock_total_actualizado(rs2.getString(2));
             }
             
-            //System.out.println("FUNCIONA :D");
-            //System.out.println("////////////////////////DEBUG///////////////////////");
-            
-            //List<DataMS> DataMSList = new ArrayList<>();
-            //for(Data datahere : DataList)
-            //{
-                //DataMS dataMs = new DataMS();
-                //dataMs.setStock_code(datahere.getStock_code());
-                //dataMs.setStock_status(datahere.getStock_status());
-                //dataMs.setCriticidad(datahere.getCriticidad());
-                
-                //DataMSList.add(dataMs);
-                
-                /*
-                System.out.println("Datos del data MS");
-                System.out.println("Stock code:     " + dataMs.getStock_code());
-                System.out.println("Stock status:   " + dataMs.getStock_status());
-                System.out.println("Criticidad:     " + dataMs.getCriticidad());
-                System.out.println("---------------------------------------------");
-                */
-            //}
-            
-            System.out.println("INICIO conexion a MSSQL:                        " + tiempo());
-            // Conexion a la Base de Datos MSSQL
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
-            System.out.println("Conexion a MSSQL exitosa");
-            
+            final int batchSize = 1000;
             
             System.out.println("INICIO insert batch a MSSQL:                    " + tiempo());
+            System.out.println("Insertando...");
             
-            // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
-            PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO dbo.TEST(stock_code, stock_status, criticidad, item_name, invent_cost_pr"
-                        + ", class, stock_type, unit_of_issue, ds, ds_large, dues_in, in_transit"
-                        + ", consign_itrans, total_picked, dues_out, reserved) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"       
-            );
-            
-            // Por cada objeto en la lista DataMS, pasa los parametros correspondientes a la prepared statement
-            for(Data data : dataList)
+            for(Data dataRs : dataList)
             {
-                ps.setString(1, data.getStock_code());
-                ps.setString(2, data.getStock_status());
-                ps.setString(3, data.getCriticidad());
-                ps.setString(4, data.getItem_name());
-                ps.setString(5, data.getInvent_cost_pr());
-                ps.setString(6, data.get_Class());
-                ps.setString(7, data.getStock_type());
-                ps.setString(8, data.getUnit_of_issue());
-                ps.setString(9, data.getDs());
-                ps.setString(10, data.getDs_large());
-                ps.setString(11, data.getDues_in());
-                ps.setString(12, data.getIn_transit());
-                ps.setString(13, data.getConsign_itrans());
-                ps.setString(14, data.getTotal_picked());
-                ps.setString(15, data.getDues_out());
-                ps.setString(16, data.getReserved());
+                ps.setString(1, dataRs.getStock_code());
+                ps.setString(2, dataRs.getStock_status());
+                ps.setString(3, dataRs.getCriticidad());
+                ps.setString(4, dataRs.getItem_name());
+                ps.setString(5, dataRs.getInvent_cost_pr());
+                ps.setString(6, dataRs.get_Class());
+                ps.setString(7, dataRs.getStock_type());
+                ps.setString(8, dataRs.getUnit_of_issue());
+                ps.setString(9, dataRs.getDs());
+                ps.setString(10, dataRs.getDs_large());
+                ps.setString(11, dataRs.getDues_in());
+                ps.setString(12, dataRs.getIn_transit());
+                ps.setString(13, dataRs.getConsign_itrans());
+                ps.setString(14, dataRs.getTotal_picked());
+                ps.setString(15, dataRs.getDues_out());
+                ps.setString(16, dataRs.getReserved());
+                ps.setString(17, dataRs.getStock_code_actualizado());
+                ps.setString(18, dataRs.getStock_total_actualizado());
                 
                 ps.addBatch();
+                if(++count % batchSize == 0) {
+                    System.out.println("Insert de " + batchSize + " filas a las: " + tiempo());
+                    ps.executeBatch();
+                }
             }
-            
+           
             // Ejecuta el Batch
-            ps.executeBatch();
+            //ps.executeBatch();
             
             // Guarda los cambios en la BD
             con.commit();   
             
-            con.close();
+            ps.close();
             
+            con.close();
             conOra.close();
             
             System.out.println("FIN insert batch a MSSQL:                       " + tiempo());
