@@ -6,10 +6,12 @@
 package connection;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import object.Data;
-import object.DataMS;
+//import object.DataMS;
 
 /**
  *
@@ -21,9 +23,16 @@ public class connectionAll {
         
         try{
             
+            String timeStamp = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss").format(Calendar.getInstance().getTime());
+            
+            System.out.println("////////////////INICIO DEL PROCESO: " + timeStamp + "/////////////////////");
+            System.out.println("INICIO conexion a Oracle:                       " + timeStamp);
+            
             Class.forName("oracle.jdbc.OracleDriver");
             Connection conOra = DriverManager.getConnection("jdbc:oracle:thin:@10.100.57.148:1522:ellrep","ellrep8","ellrep8");
             System.out.println("Conexion exitosa");
+            
+            System.out.println("INICIO query de Oracle:                         " + timeStamp);
             
             Statement st = conOra.createStatement();
             
@@ -46,23 +55,24 @@ public class connectionAll {
             "B.UNIT_OF_ISSUE, B.INVENT_COST_PR, B.CLASS, B.STOCK_TYPE, B.ROQ, B.DUES_IN, B.IN_TRANSIT, B.CONSIGN_ITRANS, B.TOTAL_PICKED, "+
             "B.DUES_OUT, B.RESERVED";
             
-            String query2 = "SELECT * FROM ELLREP.MSF000_DC0003";
+            //String query2 = "SELECT * FROM ELLREP.MSF000_DC0003";
             
-            String query3 = "SELECT * FROM ELLREP.MRF8MW";
+            //String query3 = "SELECT * FROM ELLREP.MRF8MW";
             
-            int contador = 0;
+            //int contador = 0;
             
-            st.setFetchSize(100);
+            //st.setFetchSize(100);
             ResultSet rs = st.executeQuery(query);
-            ResultSetMetaData rsmd = rs.getMetaData();
-            int columnCount = rsmd.getColumnCount();
-            
+            //ResultSetMetaData rsmd = rs.getMetaData();
+            //int columnCount = rsmd.getColumnCount();
+            System.out.println("FIN de query a Oracle:                          " + timeStamp);
             //System.out.println(columnCount);
             
+            System.out.println("INICIO query a List:                            " + timeStamp);
             List<Data> DataList = new ArrayList<>();
             
             while(rs.next()){
-                contador++;
+                //contador++;
                 // Creando el objeto y dandole los valores
                 Data data = new Data();
                 data.setStock_code(rs.getString(1));
@@ -106,18 +116,18 @@ public class connectionAll {
                 DataList.add(data);
             }
             
-            System.out.println("FUNCIONA :D");
-            System.out.println("////////////////////////DEBUG///////////////////////");
+            //System.out.println("FUNCIONA :D");
+            //System.out.println("////////////////////////DEBUG///////////////////////");
             
-            List<DataMS> DataMSList = new ArrayList<>();
-            for(Data datahere : DataList)
-            {
-                DataMS dataMs = new DataMS();
-                dataMs.setStock_code(datahere.getStock_code());
-                dataMs.setStock_status(datahere.getStock_status());
-                dataMs.setCriticidad(datahere.getCriticidad());
+            //List<DataMS> DataMSList = new ArrayList<>();
+            //for(Data datahere : DataList)
+            //{
+                //DataMS dataMs = new DataMS();
+                //dataMs.setStock_code(datahere.getStock_code());
+                //dataMs.setStock_status(datahere.getStock_status());
+                //dataMs.setCriticidad(datahere.getCriticidad());
                 
-                DataMSList.add(dataMs);
+                //DataMSList.add(dataMs);
                 
                 /*
                 System.out.println("Datos del data MS");
@@ -126,12 +136,16 @@ public class connectionAll {
                 System.out.println("Criticidad:     " + dataMs.getCriticidad());
                 System.out.println("---------------------------------------------");
                 */
-            }
+            //}
             
+            System.out.println("INICIO conexion a MSSQL:                        " + timeStamp);
             // Conexion a la Base de Datos MSSQL
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
             System.out.println("Conexion a MSSQL exitosa");
+            
+            
+            System.out.println("INICIO insert batch a MSSQL:                    " + timeStamp);
             
             // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
             PreparedStatement ps = con.prepareStatement(
@@ -139,11 +153,25 @@ public class connectionAll {
             );
             
             // Por cada objeto en la lista DataMS, pasa los parametros correspondientes a la prepared statement
-            for(DataMS dataMS : DataMSList)
+            for(Data data : DataList)
             {
-                ps.setString(1, dataMS.getStock_code());
-                ps.setString(2, dataMS.getStock_status());
-                ps.setString(3, dataMS.getCriticidad());
+                ps.setString(1, data.getStock_code());
+                ps.setString(2, data.getStock_status());
+                ps.setString(3, data.getCriticidad());
+                ps.setString(4, data.getItem_name());
+                ps.setString(5, data.getInvent_cost_pr());
+                ps.setString(6, data.get_Class());
+                ps.setString(7, data.getStock_type());
+                ps.setString(8, data.getUnit_of_issue());
+                ps.setString(9, data.getDs());
+                ps.setString(10, data.getDs_large());
+                ps.setString(11, data.getDues_in());
+                ps.setString(12, data.getIn_transit());
+                ps.setString(13, data.getConsign_itrans());
+                ps.setString(14, data.getTotal_picked());
+                ps.setString(15, data.getDues_out());
+                ps.setString(16, data.getReserved());
+                
                 ps.addBatch();
             }
             
@@ -156,6 +184,9 @@ public class connectionAll {
             con.close();
             
             conOra.close();
+            
+            System.out.println("FIN insert batch a MSSQL:                       " + timeStamp);
+            System.out.println("////////////////FIN DEL PROCESO: " + timeStamp + "/////////////////////");
             
             //Fin
             return conOra;
