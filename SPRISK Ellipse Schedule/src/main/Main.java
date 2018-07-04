@@ -1,9 +1,7 @@
 package main;
 
 
-import connection.connectionAll;
-import connection.connectionOra;
-import connection.connectionMS;
+import source.Respaldo;
 import java.sql.Connection;
 
 /*
@@ -20,7 +18,7 @@ public class Main {
     public static void main(String[] args)
     {
         // Conectar todo
-        connectionAll.connectAll();
+        Respaldo.respaldarRepuestos();
         
         // Conexion con MSSQL
         //connectionMS.MSConn();

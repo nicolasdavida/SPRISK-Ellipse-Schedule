@@ -4,14 +4,16 @@
  * and open the template in the editor.
  */
 package connection;
-import static connection.connectionAll.format;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 
 /**
  *
  * @author Armando
  */
 public class DBConnection {
+    
+    static SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss");
     
     public static String tiempo() {
         return format.format(new java.util.Date(System.currentTimeMillis()));
