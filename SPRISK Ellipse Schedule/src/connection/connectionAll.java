@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Date;
 import java.util.HashMap;
 import object.Data;
+import object.DataUpdate;
 //import object.DataMS;
 
 /**
@@ -28,18 +29,15 @@ public class connectionAll {
         
         try{
             
-            
             System.out.println("////////////////INICIO DEL PROCESO: " + tiempo() + "/////////////////////");
             System.out.println("INICIO conexion a Oracle:                       " + tiempo());
             
             Class.forName("oracle.jdbc.OracleDriver");
             Connection conOra = DriverManager.getConnection("jdbc:oracle:thin:@10.100.57.148:1522:ellrep","ellrep8","ellrep8");
-            System.out.println("Conexion exitosa");
+            System.out.println("Conexion Oracle exitosa");
             
             System.out.println("INICIO query de Oracle:                         " + tiempo());
-            
-            Statement st = conOra.createStatement();
-            
+
             String query = 
                     
             "SELECT  B.STOCK_CODE, A.STOCK_STATUS, A.STOCK_SECTIONX1 AS CRITICIDAD," +
@@ -53,45 +51,41 @@ public class connectionAll {
 //"            LEFT JOIN ellrep.MSF1CC B2 ON A.CAT_EXT_UUID = B2.CAT_EXT_UUID" +
 "            WHERE A.CLASS in ('2','A','E','R') and B.STOCK_TYPE in ('6','7','8') and A.STOCK_STATUS in ('X','A')" +
 "            and B.INVT_STAT_CODE in ('2111','3121','3131','3141','3151','4141','5201','5202','5203','5221','5222','5223','5231','5321','5401','5501','6200','6201','6203','6204','6205','6221')";
-
-            System.out.println("INICIO conexion a MSSQL:                        " + tiempo());
-            // Conexion a la Base de Datos MSSQL
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
-            System.out.println("Conexion a MSSQL exitosa");
             
-            // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
-            PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO dbo.TEST(stock_code, stock_status, criticidad, item_name, invent_cost_pr"
-                        + ", class, stock_type, unit_of_issue, ds, ds_large, dues_in, in_transit"
-                        + ", consign_itrans, total_picked, dues_out, reserved, stock_code_act, stock_total_act) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"       
-            );
-            
-            //int contador = 0;
+            int contador = 0;
             int count = 0;
             
+            Statement st = conOra.createStatement();
             ResultSet rs = st.executeQuery(query);
             
             String query2 = 
 
-            "SELECT a.STOCK_CODE, Sum(a.SOH) AS STOCK_TOTAL" +
-            " FROM ellrep.MSF1HD a INNER JOIN ellrep.MSF1CS b ON a.CUSTODIAN_ID = b.CUSTODIAN_ID" +
-            " WHERE (((a.HOLDING_TYPE)='F') AND ((b.CUSTODIAN_TYPE)='W') AND ((a.STK_OWNERSHP_IND)='O' Or (a.STK_OWNERSHP_IND)='C'))" +
-            " GROUP BY a.STOCK_CODE" +
-            " ORDER BY a.STOCK_CODE";
+            "SELECT a.STOCK_CODE, Sum(a.SOH) AS STOCK_TOTAL " +
+            "FROM ellrep.MSF1HD a INNER JOIN ellrep.MSF1CS b ON a.CUSTODIAN_ID = b.CUSTODIAN_ID " +
+            "WHERE (((a.HOLDING_TYPE)='F') AND ((b.CUSTODIAN_TYPE)='W') AND ((a.STK_OWNERSHP_IND)='O' Or (a.STK_OWNERSHP_IND)='C'))" +
+            "GROUP BY a.STOCK_CODE " +
+            "ORDER BY a.STOCK_CODE";
             
-            //Statement st2 = conOra.createStatement();
+            //Calculo LeadTime
+            String query3 =
             
+            "SELECT ELLREP_MSF221.PREQ_STK_CODE, FECHAS.Date AS fe1, FECHAS_1.Date AS fe2, [fe2]-[fe1] AS leadtime " +
+            "FROM ((ELLREP_MSF221 LEFT JOIN FECHAS AS FECHAS_1 ON ELLREP_MSF221.ONST_RCPT_DATE = FECHAS_1.MIMS_DATE) INNER JOIN ELLREP_MSF220 ON ELLREP_MSF221.PO_NO = ELLREP_MSF220.PO_NO) LEFT JOIN FECHAS ON ELLREP_MSF220.CREATION_DATE = FECHAS.MIMS_DATE " +
+            "WHERE (((FECHAS_1.Date) Is Not Null))";
+
             System.out.println("FIN de query a Oracle:                          " + tiempo());
             System.out.println("Creando la lista                                " + tiempo());
             
             List<Data> dataList = new ArrayList<>();
+            List<DataUpdate> dataList2 = new ArrayList<>();
+            
             HashMap<String, Data> dataHM = new HashMap<>();
             
             while(rs.next())
             {
                 Data data = new Data();
-                //System.out.println("Registro N°: " + contador++ + ", Hora : " + tiempo());
+                
+                System.out.println("Registro N°: " + contador++ + ", Hora : " + tiempo());
                 data.setStock_code(rs.getString(1));
                 data.setStock_status(rs.getString(2));
                 data.setCriticidad(rs.getString(3));
@@ -109,19 +103,39 @@ public class connectionAll {
                 data.setDues_out(rs.getString(15));
                 data.setReserved(rs.getString(16));
 
-                //dataList.add(data);
-                dataHM.put(rs.getString(1), data);
+                dataList.add(data);
+                //dataHM.put(rs.getString(1), data);
             }
+
+            System.out.println("INICIO conexion a MSSQL:                        " + tiempo());
+            // Conexion a la Base de Datos MSSQL
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            Connection con = DriverManager.getConnection("jdbc:sqlserver://CGS-DELL\\SQLEXPRESS:1433;databaseName=cgssa_sandbox","cgssa","123");
+            System.out.println("Conexion a MSSQL exitosa");
+            
+            // Prepara la sentencia Batch, más adelante cambiar por UPDATE en vez de INSERT
+            PreparedStatement ps = con.prepareStatement(
+                "INSERT INTO dbo.tsrmes_rpto_oracle(stock_code, stock_status, criticidad, item_name, invent_cost_pr"
+                        + ", class, stock_type, unit_of_issue, ds, ds_large, dues_in, in_transit"
+                        + ", consign_itrans, total_picked, dues_out, reserved, stock_code_act, stock_total_act) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"       
+            );
+            
             rs.close();
             
+            rs = st.executeQuery(query2);
+            contador = 0;
             
-            ResultSet rs2 = st.executeQuery(query2);       
-            while(rs2.next()){
-               Data data = dataHM.get(rs2.getString(1));
-               data.setStock_total_actualizado(rs2.getString(2));
+            while(rs.next()){
+                
+                System.out.println("Campos a actualizar N°: " + contador++ + ", Hora : " + tiempo());
+                DataUpdate data = new DataUpdate();
+                data.setStock_code_actualizado(rs.getString(1));
+                data.setStock_total_actualizado(rs.getString(2));
+                
+                dataList2.add(data);
             }
             
-            final int batchSize = 1000;
+            //final int batchSize = 1000;
             
             System.out.println("INICIO insert batch a MSSQL:                    " + tiempo());
             System.out.println("Insertando...");
@@ -148,19 +162,48 @@ public class connectionAll {
                 ps.setString(18, dataRs.getStock_total_actualizado());
                 
                 ps.addBatch();
+                /*
                 if(++count % batchSize == 0) {
-                    System.out.println("Insert de " + batchSize + " filas a las: " + tiempo());
+                    System.out.println("Insert de " + batchSize + " filas a las:" + tiempo());
                     ps.executeBatch();
-                }
+                }*/
+                
+                ps.executeBatch();
             }
-           
+            
+            con.commit(); 
+            
+            con.setAutoCommit(false);
+            PreparedStatement ps2 = con.prepareStatement(
+                "UPDATE dbo.tsrmes_rpto_oracle SET stock_total_act = ? WHERE stock_code = ?"     
+            );
+            
+            for(DataUpdate dataUp : dataList2)
+            {
+                ps2.setString(1, dataUp.getStock_total_actualizado());
+                ps2.setString(2, dataUp.getStock_code_actualizado());
+                System.out.println("Code: " + dataUp.getStock_code_actualizado());
+                System.out.println("Stock: " + dataUp.getStock_total_actualizado());
+                ps2.addBatch();
+                ps2.executeBatch();
+            }
+            
+            System.out.println("CAMPOS ACTUALIZADOS");
+            
             // Ejecuta el Batch
             //ps.executeBatch();
             
             // Guarda los cambios en la BD
             con.commit();   
+
+            st.close();
+            rs.close();
+            
+            //rs.close();
+            //rs2.close();
             
             ps.close();
+            ps2.close();
             
             con.close();
             conOra.close();
@@ -173,7 +216,7 @@ public class connectionAll {
             
         }catch(Exception ex)
         {
-            System.out.println("Error, " + ex.toString());
+            System.out.println("Error mensaje: " + ex.getMessage() + "\n" + "Error string: " + ex.toString());
         }
         return null;
     }
