@@ -18,7 +18,8 @@ public class Main {
     public static void main(String[] args)
     {
         // Conectar todo
-        Respaldo.respaldarRepuestos();
+        //Respaldo.respaldarRepuestos();
+        Respaldo.procedimientoAlmacenado();
         
         // Conexion con MSSQL
         //connectionMS.MSConn();

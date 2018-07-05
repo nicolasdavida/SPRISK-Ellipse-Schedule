@@ -226,4 +226,39 @@ public class Respaldo {
             System.out.println("Error mensaje: " + ex.getMessage() + "\n" + "Error string: " + ex.toString());
         }
     }
+    
+    public static void procedimientoAlmacenado()
+    {
+        try
+        {
+            
+            Connection conMS = DBConnection.conMSSQL();
+            System.out.println("EJECUTANDO PROCEDIMIENTO:                       " + tiempo());
+            String query = "exec dbo.sp_respaldo";
+            //String query = "exec dbo.sp_respaldo ?";
+            CallableStatement cst = conMS.prepareCall(query);
+            //cst.setInt(1, 0);
+            //int resultado = cst.getInt("row_num");
+            //cst.executeUpdate();
+            //cst.executeQuery();
+            //int resultado = cst.getInt(1);
+            ResultSet rs = cst.executeQuery();
+            while(rs.next()) //Posiciona el rs en el 1
+            {
+                int resultado = rs.getInt(1);
+                System.out.println("FILAS MODIFICADAS: " + resultado);
+            }
+            //cst.execute();
+            System.out.println("ACTUALIZANDO...");
+            //int row_count = cst.getUpdateCount();
+            cst.close();
+            System.out.println("PROCEDIMIENTO EJECUTADO");
+            //System.out.println("FILAS MODIFICADAS: " + resultado);
+            //System.out.println("FILAS MODIFICADAS: " + row_count);
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Error mensaje: " + ex.getMessage() + "\n" + "Error string: " + ex.toString());
+        }
+    }
 }
